@@ -170,7 +170,7 @@ def run_scout(n_sites, total_qubits, init_wall_idx):
 # TIER 2: SNIPER (MPS CPU)
 # =============================================================================
 
-def run_sniper_cpu(n_sites, start, end, init_wall_idx, chi=CHI_CPU):
+def run_sniper_cpu(start, end, init_wall_idx, chi=CHI_CPU):
     """
     Tier 2: MPS simulation on CPU with moderate bond dimension.
 
@@ -204,7 +204,7 @@ def run_sniper_cpu(n_sites, start, end, init_wall_idx, chi=CHI_CPU):
 # TIER 3: PRECISION (MPS GPU/CPU High χ)
 # =============================================================================
 
-def run_precision(n_sites, start, end, init_wall_idx, chi=CHI_GPU, use_gpu=False):
+def run_precision(start, end, init_wall_idx, chi=CHI_GPU, use_gpu=False):
     """
     Tier 3: MPS simulation with high bond dimension.
 
@@ -262,7 +262,7 @@ def run_pipeline(total_qubits, run_gpu=False):
     n_active = end - start
 
     # Tier 2: MPS CPU
-    cpu_vals, cpu_time = run_sniper_cpu(n_sites, start, end, init_wall_idx)
+    cpu_vals, cpu_time = run_sniper_cpu(start, end, init_wall_idx)
     cpu_density = z_to_density(cpu_vals, n_active)
 
     # Tier 3: Precision (optional)
@@ -270,7 +270,7 @@ def run_pipeline(total_qubits, run_gpu=False):
     gpu_time = None
     try:
         gpu_vals, gpu_time = run_precision(
-            n_sites, start, end, init_wall_idx, use_gpu=run_gpu
+            start, end, init_wall_idx, use_gpu=run_gpu
         )
         gpu_density = z_to_density(gpu_vals, n_active)
     except Exception as e:
