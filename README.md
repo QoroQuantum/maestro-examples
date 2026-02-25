@@ -71,6 +71,10 @@ python classical_shadows_demo.py
 python classical_shadows_demo.py --gpu
 ```
 
+#### Results
+
+The classical shadows algorithm is showcased as a method to construct an approximation of the quantum state from single samples. In spite of being inefficient in classical simulation, due to the fact that classical states, unlike quantum states, can be cloned and measured without destruction, this experiment verifies the correctness of expectation values computed from shadows, which can be used with measurement outcomes from quantum hardware to succesively compute expectation values without reexecuting the quantum circuit creating the quantum state each time.
+
 ---
 
 ### 3. [Fermi-Hubbard Model](./fermi_hubbard)
@@ -101,6 +105,19 @@ python fermi_hubbard_demo.py --gpu
 # Include scaling sweep across system sizes
 python fermi_hubbard_demo.py --scaling
 ```
+#### Results
+
+The experiment showcases the fact that physically interesting behaviour is confined to a relatively small region, with all other sites being either completely full or completely empty. The Pauli propagation scout provides a first rough pass, which determines which sites are frozen and excludes them from further, costlier simulation steps, as their dynamics are known. After that, we run MPS simulation with tunable maximum bond dimension to characterize the active region around the domain wall to the required precision.
+
+![Density per lattice site](images/adaptive_hubbard_density.png)
+
+This experiment highlights the speed and scaling advantage of Pauli propagation compared to MPS simulation or state reconstruction using classical shadows. While classical shadows allow for acccesing the properties of the uncollapsed quantum state when using hardware, estimation algorithms remain competitive in simulation.
+
+#### Performance notes
+
+Using the GPU simulator for the high-maximum bond dimension precision simulation provides a ~10x speedup over running on just CPUs. Furthermore, since this costly precision step dominates total pipeline time, the whole experiment can be completed in significantly less time.
+
+![Time taken for each phase in the solver of the Fermi-Hubbard model, with CPU vs with GPU](images/adaptive_hubbard_time_comparison.png)
 
 ## Maestro Features Demonstrated
 
