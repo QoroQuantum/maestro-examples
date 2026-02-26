@@ -85,8 +85,10 @@ From the perspective of classical simulation, classical shadowing is inefficient
 
 The inefficiency of the classical shadow algorithm on classical hardware is made more apparent when sampling on GPUs, due to high memory transfer overheads.
 
+Pauli propagation vs classical shadowing cost, CPU:
 ![Pauli propagation vs classical shadowing cost, CPU](images/search_cost_cpu.png)
 
+Pauli propagation vs classical shadowing cost, GPU
 ![Pauli propagation vs classical shadowing cost, GPU](images/search_cost_gpu.png)
 
 
