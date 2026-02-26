@@ -5,8 +5,9 @@ Example simulations demonstrating quantum simulation capabilities with the [Maes
 ## Table of Contents
 
 1. [Rydberg Atom Simulation](#1-rydberg-atom-simulation) — Phase diagram and spatial correlations of a 64-atom array
-2. [Classical Shadows](#2-classical-shadows) — Entanglement detection via PP Scout → MPS Sniper pipeline
+2. [Classical Shadows](#2-classical-shadows) — Entanglement detection via MPS-based shadow tomography
 3. [Fermi-Hubbard Model](#3-fermi-hubbard-model) — Adaptive 3-tier simulation exploiting Lieb-Robinson bounds
+4. [Adaptive Bond Dimension](#4-adaptive-bond-dimension) — CPU↔GPU backend switching for time evolution
 
 ## Getting Started
 
@@ -40,25 +41,21 @@ Simulates the adiabatic preparation of a Z2-ordered phase in a 1D Rydberg atom a
 
 📓 **[Interactive notebook](./rydberg_atom_simulation/rydberg_atom_simulation.ipynb)** — step-by-step tutorial
 
-MPS efficiently simulates 64 qubits on a laptop — mapping the full quantum phase transition and confirming long-range Z2 order from bitstring statistics alone.
-
 ---
 
 ### 2. [Classical Shadows](./classical_shadows)
 
-Detects quantum entanglement using classical shadows ([Huang et al., 2020](https://arxiv.org/abs/2002.08953)) with a multi-backend pipeline. The Pauli Propagator scouts the lattice in milliseconds to find entanglement hotspots, then the MPS backend runs the expensive shadow protocol only where it matters.
+Estimates entanglement entropy using the classical shadows protocol ([Huang et al., 2020](https://arxiv.org/abs/2002.08953)) with Maestro's MPS backend. Tracks how the 2nd Rényi entropy $S_2$ grows during Trotter evolution of the transverse-field Ising model.
 
 **Key Features:**
-- Pauli Propagator as a fast entanglement scout (Heisenberg picture, O(n·d))
-- MPS as a precision sniper for targeted shadow estimation (Schrödinger picture)
-- T-gate injection demonstrating Clifford → non-Clifford backend transition
-- Adaptive bond dimension handoff (CPU χ=16 → GPU χ=64)
-- Hot vs cold subsystem comparison validating the scout's predictions
+- Classical shadow protocol with random single-qubit Cliffords
+- MPS-based state preparation and measurement (`execute(shots=1)`)
+- Entanglement growth curves across Trotter depths
 - Exact ED reference for small systems (≤20 qubits)
 
 **Scripts:**
-- `classical_shadows_demo.py` — Full 6-act showcase → `energy_evolution.png`, `entanglement_growth.png`, `lattice_heatmap.png`
-- `helpers.py` — Reusable library: config, circuits, scout, shadow reconstruction, plotting
+- `classical_shadows_demo.py` — Shadow sweep → `entanglement_growth.png`
+- `helpers.py` — Reusable library: config, circuits, shadow reconstruction
 
 📓 **[Interactive notebook](./classical_shadows/classical_shadows.ipynb)** — step-by-step tutorial
 
@@ -73,7 +70,7 @@ python classical_shadows_demo.py
 python classical_shadows_demo.py --gpu
 ```
 
-Demonstrates how Pauli Propagator scouting reduces the cost of entanglement detection by targeting only the most promising subsystems, avoiding full tomography's exponential overhead.
+At 36 qubits, full tomography needs $4^{36} \approx 4.7 \times 10^{21}$ measurements — classical shadows use just 200 snapshots.
 
 ---
 
@@ -108,16 +105,47 @@ python fermi_hubbard_demo.py --scaling
 
 The Lieb-Robinson light cone lets Maestro simulate a 200-qubit system at the cost of ~40 qubits, with GPU acceleration providing ~10× speedup on the precision tier.
 
+---
+
+### 4. [Adaptive Bond Dimension](./adaptive_bond_dimension)
+
+Demonstrates how easy it is to switch between CPU and GPU backends during MPS time evolution. As entanglement grows, the simulation automatically upgrades from low bond dimension (CPU) to high bond dimension (GPU) — with just a single argument change.
+
+**Key Features:**
+- Side-by-side comparison: CPU low-χ vs CPU high-χ vs GPU high-χ
+- Automatic handoff when entanglement exceeds threshold
+- Per-step timing breakdown showing where GPU acceleration pays off
+- Trivial backend switching — same API, same code
+
+**Scripts:**
+- `adaptive_mps.py` — Full comparison → `adaptive_comparison.png`
+
+📓 **[Interactive notebook](./adaptive_bond_dimension/adaptive_bond_dimension.ipynb)** — step-by-step tutorial
+
+```bash
+# CPU only (compare bond dimensions)
+python adaptive_mps.py
+
+# With GPU acceleration
+python adaptive_mps.py --gpu
+
+# Large system (8×8 = 64 qubits)
+python adaptive_mps.py --large --gpu
+```
+
+The pitch: Maestro lets you switch backends with one argument. No code rewrite, no separate GPU code paths.
+
 ## Maestro Features Demonstrated
 
 | Feature | API | Examples |
 |---------|-----|----------|
-| Pauli Propagator | `SimulationType.PauliPropagator` | Classical Shadows (Act 1), Fermi-Hubbard (Tier 1) |
 | Matrix Product State | `SimulationType.MatrixProductState` | All examples |
-| Bond dimension control | `max_bond_dimension=χ` | Classical Shadows (Acts 3, 6), Fermi-Hubbard (Tiers 2, 3) |
-| Expectation values | `qc.estimate(observables=...)` | Rydberg (phase diagram), Classical Shadows, Fermi-Hubbard |
-| Bitstring sampling | `qc.execute(shots=N)` | Rydberg (correlations), Classical Shadows (Act 5) |
-| GPU acceleration | `SimulatorType.Gpu` | Classical Shadows, Fermi-Hubbard |
+| Pauli Propagator | `SimulationType.PauliPropagator` | Fermi-Hubbard (Tier 1) |
+| Bond dimension control | `max_bond_dimension=χ` | Adaptive Bond Dimension, Fermi-Hubbard |
+| Expectation values | `qc.estimate(observables=...)` | Rydberg, Adaptive, Fermi-Hubbard |
+| Bitstring sampling | `qc.execute(shots=N)` | Rydberg (correlations), Classical Shadows |
+| CPU backend | `SimulatorType.QCSim` | All examples |
+| GPU acceleration | `SimulatorType.CuQuantum` | Adaptive Bond Dimension, Fermi-Hubbard |
 
 ## License
 

@@ -176,14 +176,20 @@ def append_random_clifford_layer(
 # PP Scout: identify the most entangled subsystem
 # ─────────────────────────────────────────────────────────────────────
 
-def scout_entanglement(config: Config) -> dict:
+def scout_entanglement(config: Config, n_steps: int = 3) -> dict:
     """
-    Scout phase: use Pauli Propagator on a single TFIM Trotter step to
+    Scout phase: use Pauli Propagator on a TFIM Trotter circuit to
     identify the most and least entangled subsystems.
 
     Computes ⟨Z_i Z_j⟩ for all nearest-neighbor bonds and ranks by
     coordination-weighted entanglement score:
       score(i,j) = |⟨Z_i Z_j⟩| × (nn_i + nn_j) / 8
+
+    Args:
+        config: Config object
+        n_steps: Number of Trotter steps for the scout circuit.
+                 More steps = more time evolution = better differentiation
+                 between bonds. Default=3 balances speed vs accuracy.
 
     Returns dict with 'hot_qubits', 'cold_qubits', and full correlation data.
     """
@@ -191,7 +197,7 @@ def scout_entanglement(config: Config) -> dict:
     bonds = get_nn_bonds(config.lx, config.ly)
 
     qc = build_tfim_trotter_circuit(
-        n, bonds, config.j_coupling, config.h_field, config.dt, n_steps=1
+        n, bonds, config.j_coupling, config.h_field, config.dt, n_steps=n_steps
     )
 
     observables = [
