@@ -90,6 +90,26 @@ python classical_shadows_demo.py --small
 - **`entanglement_growth.png`** — S₂ comparison: PP-scouted hot vs cold subsystem, with exact ED reference (when ≤20 qubits)
 - **`lattice_heatmap.png`** — 2D lattice with bond entanglement scores
 
+## Results
+
+The classical shadows algorithm constructs an approximation of the quantum state from single samples. Classical shadows reconstruct a quantum state from single measurements, allowing for successively calculating indefinitely many expectation values in post-processing after a limited number of runs in quantum hardware.
+
+With appropriately high precision parameters, the simulation succeeds in identifying the "hot" (high-entropy) qubits:
+
+![Scouted (hot) qubit entropy vs cold](entanglement_growth.png)
+
+### Performance notes
+
+From the perspective of classical simulation, classical shadowing is inefficient due to the fact that classical states, unlike quantum states, can be copied and measured without loss of information. This experiment illustrates the validity of the classical shadow algorithm, but classical expectation value computation methods such as Pauli propagation or MPS remain more efficient.
+
+The inefficiency of the classical shadow algorithm on classical hardware is made more apparent when sampling on GPUs, due to high memory transfer overheads.
+
+Pauli propagation vs classical shadowing cost, CPU:
+![Pauli propagation vs classical shadowing cost, CPU](search_cost_cpu.png)
+
+Pauli propagation vs classical shadowing cost, GPU
+![Pauli propagation vs classical shadowing cost, GPU](search_cost_gpu.png)
+
 ## Key Maestro Features Used
 
 | Feature | API | Where Used |

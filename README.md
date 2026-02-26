@@ -40,6 +40,8 @@ Simulates the adiabatic preparation of a Z2-ordered phase in a 1D Rydberg atom a
 
 📓 **[Interactive notebook](./rydberg_atom_simulation/rydberg_atom_simulation.ipynb)** — step-by-step tutorial
 
+MPS efficiently simulates 64 qubits on a laptop — mapping the full quantum phase transition and confirming long-range Z2 order from bitstring statistics alone.
+
 ---
 
 ### 2. [Classical Shadows](./classical_shadows)
@@ -71,26 +73,7 @@ python classical_shadows_demo.py
 python classical_shadows_demo.py --gpu
 ```
 
-#### Results
-
-The classical shadows algorithm constructs an approximation of the quantum state from single samples. Classical shadows reconstruct a quantum state from single measurements, allowing for successively calculating indefinitely many expectation values in post-processing after a limited number of runs in quantum hardware.
-
-With appropriately high precision parameters, the simulation succeeds in identifying the "hot" (high-entropy) qubits:
-
-![Scouted (hot) qubit entropy vs cold](classical_shadows/entanglement_growth.png)
-
-#### Performance notes
-
-From the perspective of classical simulation, classical shadowing is inefficient due to the fact that classical states, unlike quantum states, can be copied and measured without loss of information. This experiment illustrates the validity of the classical shadow algorithm, but classical expectation value computation methods such as Pauli propagation or MPS remain more efficient.
-
-The inefficiency of the classical shadow algorithm on classical hardware is made more apparent when sampling on GPUs, due to high memory transfer overheads.
-
-Pauli propagation vs classical shadowing cost, CPU:
-![Pauli propagation vs classical shadowing cost, CPU](classical_shadows/search_cost_cpu.png)
-
-Pauli propagation vs classical shadowing cost, GPU
-![Pauli propagation vs classical shadowing cost, GPU](classical_shadows/search_cost_gpu.png)
-
+Demonstrates how Pauli Propagator scouting reduces the cost of entanglement detection by targeting only the most promising subsystems, avoiding full tomography's exponential overhead.
 
 ---
 
@@ -122,19 +105,8 @@ python fermi_hubbard_demo.py --gpu
 # Include scaling sweep across system sizes
 python fermi_hubbard_demo.py --scaling
 ```
-#### Results
 
-The experiment showcases the fact that physically interesting behaviour is confined to a relatively small region, with all other sites being either completely full or completely empty. The Pauli propagation scout provides a first rough pass, which determines which sites are frozen and excludes them from further, costlier simulation steps, as their dynamics are known. After that, we run MPS simulation with tunable maximum bond dimension to characterize the active region around the domain wall to the required precision.
-
-![Density per lattice site](fermi_hubbard/adaptive_hubbard_density.png)
-
-This experiment highlights the speed and scaling advantage of Pauli propagation compared to MPS simulation or state reconstruction using classical shadows. While classical shadows allow for acccesing the properties of the uncollapsed quantum state when using hardware, estimation algorithms remain competitive in simulation.
-
-#### Performance notes
-
-Using the GPU simulator for the high-maximum bond dimension precision simulation provides a ~10x speedup over running on just CPUs. Furthermore, since this costly precision step dominates total pipeline time, the whole experiment can be completed in significantly less time.
-
-![Time taken for each phase in the solver of the Fermi-Hubbard model, with CPU vs with GPU](fermi_hubbard/adaptive_hubbard_time_comparison.png)
+The Lieb-Robinson light cone lets Maestro simulate a 200-qubit system at the cost of ~40 qubits, with GPU acceleration providing ~10× speedup on the precision tier.
 
 ## Maestro Features Demonstrated
 

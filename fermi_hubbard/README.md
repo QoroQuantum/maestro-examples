@@ -74,6 +74,20 @@ python fermi_hubbard_demo.py --scaling
 - **`adaptive_hubbard_density.png`** — Particle density profile showing the domain wall spreading, with active vs frozen regions highlighted
 - **`adaptive_hubbard_scaling.png`** — Wall-clock time vs system size showing that MPS time is constant (light cone is fixed) while only scout time grows (generated with `--scaling`)
 
+## Results
+
+The experiment showcases the fact that physically interesting behaviour is confined to a relatively small region, with all other sites being either completely full or completely empty. The Pauli propagation scout provides a first rough pass, which determines which sites are frozen and excludes them from further, costlier simulation steps, as their dynamics are known. After that, we run MPS simulation with tunable maximum bond dimension to characterize the active region around the domain wall to the required precision.
+
+![Density per lattice site](adaptive_hubbard_density.png)
+
+This experiment highlights the speed and scaling advantage of Pauli propagation compared to MPS simulation or state reconstruction using classical shadows. While classical shadows allow for acccesing the properties of the uncollapsed quantum state when using hardware, estimation algorithms remain competitive in simulation.
+
+### Performance notes
+
+Using the GPU simulator for the high-maximum bond dimension precision simulation provides a ~10x speedup over running on just CPUs. Furthermore, since this costly precision step dominates total pipeline time, the whole experiment can be completed in significantly less time.
+
+![Time taken for each phase in the solver of the Fermi-Hubbard model, with CPU vs with GPU](adaptive_hubbard_time_comparison.png)
+
 ## Key Maestro Features Used
 
 | Feature | API | Where Used |
