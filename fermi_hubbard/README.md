@@ -1,53 +1,42 @@
 # Fermi-Hubbard Model: Adaptive Simulation Pipeline
 
-Demonstrates Maestro's multi-tier adaptive simulation for the 1D Fermi-Hubbard model — a fundamental model of strongly correlated electron systems.
+> 🚀 **Try Maestro GPU mode with a free trial.**
+> Sign up at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** — no credit card required.
 
-## Physics Background
+## Why GPU Mode?
 
-The Fermi-Hubbard model describes electrons hopping on a lattice with on-site interactions:
+The adaptive pipeline's **precision tier** (χ=256) dominates total runtime — and MPS tensor contractions scale as **O(χ³)**. On CPU, the precision step alone can take hours. GPU acceleration provides a **~10× speedup** on this bottleneck, collapsing the whole pipeline from hours to minutes.
 
-$$H = -t \sum_{\langle i,j \rangle, \sigma} (c^\dagger_{i,\sigma} c_{j,\sigma} + \text{h.c.}) + U \sum_i n_{i,\uparrow} n_{i,\downarrow}$$
+![Time taken for each phase, CPU vs GPU](adaptive_hubbard_time_comparison.png)
 
-where:
-- **t** (hopping) controls kinetic energy — electrons tunnel between adjacent sites
-- **U** (interaction) controls potential energy — penalty for double occupancy
-- **U/t** ratio determines the phase: metallic (small U/t) vs Mott insulator (large U/t)
+## What It Does
 
-### Jordan-Wigner Mapping
+Simulates a **200-qubit 1D Fermi-Hubbard system** — a fundamental model of strongly correlated electrons. The key insight: after a domain-wall quench, information propagates at a finite **Lieb-Robinson velocity**, creating a causal light cone. Most of the system stays frozen, so a 200-qubit problem reduces to **~40 active qubits**.
 
-The fermionic Hamiltonian is mapped to qubits using the Jordan-Wigner transformation:
-- Qubits `[0, N)` → spin-up electrons
-- Qubits `[N, 2N)` → spin-down electrons
+The 3-tier adaptive pipeline exploits this:
 
-For 1D nearest-neighbor hopping, no Jordan-Wigner strings are needed, giving:
-- **Hopping:** `exp(-i dt t (XX + YY) / 2)` per bond
-- **Interaction:** `exp(-i dt U/4 (I - Z↑ - Z↓ + Z↑Z↓))` per site
+1. **Scout** (Pauli Propagator) — Clifford-only proxy on the full system to detect the active region. Seconds.
+2. **Sniper** (MPS CPU, χ=64) — Real Trotter circuit on just the active subregion. Fast, approximate.
+3. **Precision** (MPS GPU, χ=256) — High bond dimension for converged results. **This is where GPU pays off.**
 
-### Domain Wall Quench
+### Phase 1 — Local (CPU)
 
-The simulation starts from a **domain wall** initial state — left half filled, right half empty. This creates a local quench whose dynamics reveal charge transport. The key insight is that information propagates at a finite **Lieb-Robinson velocity**, creating a causal light cone.
+200-qubit system, all three tiers on CPU. The scout and sniper tiers are fast. The precision tier is the bottleneck — but it proves the pipeline works.
 
-## The 3-Tier Adaptive Pipeline
+### Phase 2 — GPU Mode
 
-### Tier 1: Scout (Pauli Propagator)
+Same pipeline, but the precision tier runs on GPU. The **~10× speedup** on the O(χ³) contractions means the precision step no longer dominates — the whole experiment finishes in minutes.
 
-**Backend:** `PauliPropagator` · **Cost:** O(n), seconds
+```bash
+# Phase 1: CPU only
+python fermi_hubbard_demo.py
 
-Runs a Clifford-only proxy circuit on the **full** system to detect which sites have non-trivial dynamics. The Clifford proxy preserves the circuit's connectivity structure while remaining PP-compatible.
+# Phase 2: GPU precision tier
+python fermi_hubbard_demo.py --gpu
 
-**How it works:** Measures `⟨Z_i⟩` for all sites and compares to the initial domain-wall state. Sites where `|⟨Z⟩ - Z_initial| > threshold` are marked "active."
-
-### Tier 2: Sniper (MPS CPU, χ=64)
-
-**Backend:** `MatrixProductState` on CPU
-
-Runs the **real** Trotterized circuit (with non-Clifford Rz gates) only on the active subregion detected by the scout. For a 200-qubit system with a ~40-qubit active region, this is a **5× reduction** in simulation cost.
-
-### Tier 3: Precision (MPS GPU/CPU, χ=256)
-
-**Backend:** `MatrixProductState` with high bond dimension
-
-Re-runs with higher χ for converged results. GPU acceleration provides 10–100× speedup for the O(χ³) tensor contractions that dominate MPS cost.
+# Include scaling sweep across system sizes
+python fermi_hubbard_demo.py --scaling
+```
 
 ## Code Structure
 
@@ -56,50 +45,27 @@ Re-runs with higher χ for converged results. GPU acceleration provides 10–100
 | `model.py` | `FermiHubbardModel` class — circuit construction for Trotter evolution and Clifford scout |
 | `fermi_hubbard_demo.py` | 3-tier pipeline: Scout → Sniper → Precision, with visualization |
 
-## Usage
+📓 **[Interactive notebook](./fermi_hubbard.ipynb)** — step-by-step tutorial
 
-```bash
-# Default: 200-qubit system, CPU only
-python fermi_hubbard_demo.py
+## Expected Output
 
-# With GPU precision tier
-python fermi_hubbard_demo.py --gpu
-
-# Include scaling sweep across system sizes
-python fermi_hubbard_demo.py --scaling
-```
-
-## Output
-
-- **`adaptive_hubbard_density.png`** — Particle density profile showing the domain wall spreading, with active vs frozen regions highlighted
-- **`adaptive_hubbard_scaling.png`** — Wall-clock time vs system size showing that MPS time is constant (light cone is fixed) while only scout time grows (generated with `--scaling`)
-
-## Results
-
-The experiment showcases the fact that physically interesting behaviour is confined to a relatively small region, with all other sites being either completely full or completely empty. The Pauli propagation scout provides a first rough pass, which determines which sites are frozen and excludes them from further, costlier simulation steps, as their dynamics are known. After that, we run MPS simulation with tunable maximum bond dimension to characterize the active region around the domain wall to the required precision.
+**`adaptive_hubbard_density.png`** — Particle density profile showing domain wall spreading. Active vs frozen regions highlighted — most of the 200-qubit system stays frozen.
 
 ![Density per lattice site](adaptive_hubbard_density.png)
 
-This experiment highlights the speed and scaling advantage of Pauli propagation compared to MPS simulation or state reconstruction using classical shadows. While classical shadows allow for acccesing the properties of the uncollapsed quantum state when using hardware, estimation algorithms remain competitive in simulation.
+**`adaptive_hubbard_scaling.png`** — Wall-clock time vs system size. MPS time stays constant (light cone is fixed) while only the scout time grows linearly.
 
-### Performance notes
+## Configuration
 
-Using the GPU simulator for the high-maximum bond dimension precision simulation provides a ~10x speedup over running on just CPUs. Furthermore, since this costly precision step dominates total pipeline time, the whole experiment can be completed in significantly less time.
+| Parameter | Default |
+|-----------|---------|
+| System size | 200 qubits (100 sites × 2 spins) |
+| Scout | Pauli Propagator (full system) |
+| Sniper χ | 64 |
+| Precision χ | 256 |
+| Hopping t | 1.0 |
+| Interaction U | 4.0 |
 
-![Time taken for each phase in the solver of the Fermi-Hubbard model, with CPU vs with GPU](adaptive_hubbard_time_comparison.png)
+---
 
-## Key Maestro Features Used
-
-| Feature | API | Where Used |
-|---------|-----|------------|
-| Pauli Propagator | `SimulationType.PauliPropagator` | Tier 1 (scout) |
-| MPS Simulation | `SimulationType.MatrixProductState` | Tiers 2, 3 |
-| Bond dimension control | `max_bond_dimension=64/256` | Tier 2 vs 3 |
-| GPU acceleration | `SimulatorType.Gpu` | Tier 3 with `--gpu` |
-| QuantumCircuit | `maestro.circuits.QuantumCircuit` | All tiers |
-
-## Requirements
-
-- `qoro-maestro` Python package
-- `numpy`
-- `matplotlib`
+👉 **Ready for GPU-accelerated precision?** [Start your free GPU trial](https://maestro.qoroquantum.net) and run with `--gpu`.

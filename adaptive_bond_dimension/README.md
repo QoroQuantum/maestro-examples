@@ -1,49 +1,43 @@
 # Adaptive Bond Dimension: CPU↔GPU Handoff
 
-## Why This Matters
+> 🚀 **Try Maestro GPU mode with a free trial.**
+> Sign up at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** — no credit card required.
 
-MPS simulations control accuracy via **bond dimension** $\chi$. Higher $\chi$ captures more entanglement but costs more — tensor contractions scale as $O(\chi^3)$.
+## Why GPU Mode?
 
-The key insight: **entanglement grows during time evolution**. Early time steps need only low $\chi$ (fast, CPU is fine). Later steps need high $\chi$ to maintain accuracy — and that's where **GPU acceleration pays off**.
+MPS accuracy is controlled by **bond dimension** χ. Higher χ captures more entanglement but costs **O(χ³)** per step. On CPU, the runtime grows rapidly — going from χ=16 to χ=64 is a **64× cost increase**. GPU parallelism absorbs this cost, making high-χ simulation practical.
 
-Maestro makes switching between CPU and GPU backends trivial: change one argument, no code rewrite needed.
+The pitch: **Maestro lets you switch backends with one argument.** No code rewrite, no separate GPU code paths. Same API, GPU speed.
 
-## What This Example Demonstrates
+## What It Does
+
+Demonstrates how trivially Maestro switches between CPU and GPU backends during MPS time evolution. Compares four configurations side-by-side to show where GPU acceleration pays off:
 
 1. **Low χ on CPU** — fast but loses accuracy as entanglement grows
-2. **High χ on CPU** — accurate but slow ($\sim 20\times$ per-step cost)
-3. **High χ on GPU** — accurate AND fast (GPU parallelism wins for large tensor contractions)
-4. **Adaptive** — start at low χ (CPU), automatically switch to high χ (GPU) when the energy change signals growing entanglement
+2. **High χ on CPU** — accurate but slow (~20× per-step cost)
+3. **High χ on GPU** — accurate AND fast
+4. **Adaptive** — starts at low χ (CPU), automatically switches to high χ (GPU) when entanglement demands it
 
-## Code Structure
+### Phase 1 — Local (CPU)
 
-| File | Purpose |
-|------|---------|
-| `adaptive_mps.py` | Main script: runs all four configurations and compares |
+Compare low-χ vs high-χ on CPU. See exactly where accuracy degrades and how much extra time high-χ costs on CPU.
 
-## Usage
+### Phase 2 — GPU Mode
+
+Add GPU to the comparison. Watch the high-χ GPU configuration match CPU accuracy at a fraction of the time. The adaptive mode shows the optimal strategy: cheap CPU steps early, GPU power when it matters.
 
 ```bash
-# CPU only (compares low-χ vs high-χ)
+# Phase 1: CPU only (compare bond dimensions)
 python adaptive_mps.py
 
-# With GPU acceleration (shows the full CPU→GPU handoff)
+# Phase 2: Full CPU↔GPU comparison
 python adaptive_mps.py --gpu
 
 # Larger system (8×8 = 64 qubits)
-python adaptive_mps.py --large
-
-# Large system with GPU
 python adaptive_mps.py --large --gpu
 ```
 
-## Output
-
-- **`adaptive_comparison.png`** — Energy evolution and per-step cost comparison across all configurations
-
-![Adaptive bond dimension comparison](adaptive_comparison.png)
-
-## How the Handoff Works
+## The One-Line Switch
 
 ```python
 # Low-χ on CPU (fast, approximate)
@@ -61,21 +55,25 @@ result = qc.estimate(
 )
 ```
 
-Same API, same code — just change `simulator_type` and `max_bond_dimension`. Maestro handles the backend switch transparently.
+Same API. Same code. Just change `simulator_type` and `max_bond_dimension`.
 
-## Key Maestro Features Used
+📓 **[Interactive notebook](./adaptive_bond_dimension.ipynb)** — step-by-step tutorial
 
-| Feature | API | Purpose |
-|---------|-----|---------|
-| MPS Simulation | `SimulationType.MatrixProductState` | Core simulation method |
-| Bond dimension | `max_bond_dimension=χ` | Accuracy vs speed control |
-| CPU backend | `SimulatorType.QCSim` | Fast at low χ |
-| GPU backend | `SimulatorType.CuQuantum` | Fast at high χ |
-| Expectation values | `qc.estimate(observables=...)` | Energy monitoring |
+## Expected Output
 
-## Requirements
+**`adaptive_comparison.png`** — Energy evolution and per-step cost comparison across all four configurations. Shows where GPU acceleration becomes essential.
 
-- `qoro-maestro` Python package
-- `numpy`
-- `matplotlib`
-- NVIDIA GPU + cuQuantum (for `--gpu` mode)
+![Adaptive bond dimension comparison](adaptive_comparison.png)
+
+## Configuration
+
+| Parameter | Default | Large |
+|-----------|---------|-------|
+| Qubits | 16 | 64 (8×8) |
+| Low χ | 16 | 16 |
+| High χ | 64 | 64 |
+| Trotter steps | 20 | 20 |
+
+---
+
+👉 **Ready for high-χ at GPU speed?** [Start your free GPU trial](https://maestro.qoroquantum.net) and run with `--gpu`.

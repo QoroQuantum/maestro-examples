@@ -1,67 +1,63 @@
 # Classical Shadows: Entanglement Detection via MPS
 
-## Why This Problem Matters
+> 🚀 **Try Maestro GPU mode with a free trial.**
+> Sign up at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** — no credit card required.
 
-**Entanglement entropy** quantifies genuine quantum correlations but requires exponentially many measurements via full tomography. **Classical Shadows** ([Huang et al., 2020](https://arxiv.org/abs/2002.08953)) reduce this to $O(\log n / \varepsilon^2)$ samples — estimating properties of quantum states with far fewer measurements than full state tomography.
+## Why GPU Mode?
 
-This example demonstrates the classical shadows protocol using Maestro's MPS backend, estimating the 2nd Rényi entropy $S_2$ of subsystems in a transverse-field Ising model (TFIM) on a 2D lattice.
+The classical shadows protocol needs **hundreds of independent MPS snapshots** — each one a full simulation (`execute(shots=1)`). At 36 qubits, that's hundreds of MPS runs in sequence. GPU-accelerated MPS cuts per-snapshot time dramatically, making large-scale shadow tomography practical instead of painful.
 
-## Protocol
+At 36 qubits, full tomography needs **4³⁶ ≈ 4.7 × 10²¹ measurements**. Classical shadows use just 200 snapshots — but those snapshots still need a fast simulator.
 
-1. **Prepare** the state via Trotterized time evolution of the TFIM
-2. **Apply** random single-qubit Cliffords to each qubit
-3. **Measure** in the computational basis (1 shot per snapshot)
-4. **Reconstruct** shadow density matrix $\hat{\rho} = \bigotimes_i (3 U_i^\dagger |b_i\rangle\langle b_i| U_i - I)$
-5. **Repeat** $M$ times and average to estimate $S_2$
+## What It Does
+
+Estimates **entanglement entropy** using the classical shadows protocol ([Huang et al., 2020](https://arxiv.org/abs/2002.08953)) with Maestro's MPS backend. Tracks how the 2nd Rényi entropy S₂ grows during Trotter evolution of the transverse-field Ising model on a 2D lattice.
+
+**Protocol:** Prepare state → apply random Cliffords → measure → reconstruct shadow → repeat M times → estimate S₂.
+
+### Phase 1 — Local (CPU)
+
+4×4 = 16 qubits with exact ED reference. Runs in ~2 minutes. Proves the shadow protocol works and tracks entanglement growth.
+
+### Phase 2 — GPU Mode
+
+6×6 = 36 qubits — well beyond exact diagonalization. GPU mode accelerates each of the hundreds of shadow snapshots.
+
+```bash
+# Phase 1: Quick test (16 qubits, CPU, ~2 min)
+python classical_shadows_demo.py --small
+
+# Phase 1: Full run (36 qubits, CPU)
+python classical_shadows_demo.py
+
+# Phase 2: GPU-accelerated shadows
+python classical_shadows_demo.py --gpu
+```
 
 ## Code Structure
 
 | File | Purpose |
 |------|---------|
-| `helpers.py` | Reusable functions: `Config`, circuit builders, shadow collection, purity estimation |
-| `classical_shadows_demo.py` | Main script: sweep Trotter depths, estimate $S_2$, compare with exact ED |
+| `helpers.py` | Reusable library: config, circuits, shadow reconstruction |
+| `classical_shadows_demo.py` | Main script: sweep Trotter depths, estimate S₂ |
 
-## Usage
+📓 **[Interactive notebook](./classical_shadows.ipynb)** — step-by-step tutorial
 
-```bash
-# Quick test: 4×4 = 16 qubits + exact ED reference (~2 min)
-python classical_shadows_demo.py --small
+## Expected Output
 
-# Full run: 6×6 = 36 qubits
-python classical_shadows_demo.py
-
-# With GPU acceleration
-python classical_shadows_demo.py --gpu
-```
-
-## Output
-
-- **`entanglement_growth.png`** — $S_2$ vs simulation time, with exact ED reference (when ≤20 qubits)
-
-## Results
-
-The shadow estimates track the exact entanglement growth curve, demonstrating that the protocol correctly captures how entanglement develops during Trotter evolution:
+**`entanglement_growth.png`** — S₂ vs simulation time. Shadow estimates track the exact entanglement growth curve, showing how entanglement develops during Trotter evolution.
 
 ![Entanglement growth via classical shadows](entanglement_growth.png)
 
-At 36 qubits, exact diagonalization is impossible ($2^{36}$ amplitudes). Classical shadows use just 200 snapshots vs $4^{36} \approx 4.7 \times 10^{21}$ full tomography measurements.
+## Configuration
 
-### Sample complexity note
+| Parameter | Default |
+|-----------|---------|
+| Qubits | 16 (small) / 36 (full) |
+| Bond dim χ | 16–32 |
+| Shadows | 200 |
+| Trotter depths | Multiple |
 
-Each shadow snapshot is an independent MPS simulation (`execute(shots=1)`). The shadow reconstruction factor of $3^k$ (where $k$ is the subsystem size) introduces variance — individual $S_2$ estimates are noisy, but the qualitative trend is reliable. For higher quantitative accuracy, increase the number of snapshots (e.g., `--n-shadows 1000`).
+---
 
-## Key Maestro Features Used
-
-| Feature | API | Purpose |
-|---------|-----|---------|
-| MPS Simulation | `SimulationType.MatrixProductState` | State preparation and measurement |
-| Bond dimension | `max_bond_dimension=χ` | Controls accuracy vs speed |
-| Bitstring sampling | `qc.execute(shots=1)` | Shadow snapshot collection |
-| Expectation values | `qc.estimate(observables=...)` | Exact ED reference |
-| GPU acceleration | `SimulatorType.CuQuantum` | Optional GPU speedup with `--gpu` |
-
-## Requirements
-
-- `qoro-maestro` Python package
-- `numpy`
-- `matplotlib`
+👉 **Ready for larger systems?** [Start your free GPU trial](https://maestro.qoroquantum.net) and accelerate shadow collection with `--gpu`.

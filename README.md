@@ -1,139 +1,129 @@
 # Maestro Examples
 
-Example simulations demonstrating quantum simulation capabilities with the [Maestro](https://github.com/QoroQuantum/maestro) high-performance quantum circuit simulator.
+> 🚀 **Go beyond your laptop.** Try Maestro GPU mode with a **free trial.**
+> Sign up at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** to run these simulations at scale.
 
-## Table of Contents
+Example simulations demonstrating quantum simulation capabilities with the [Maestro](https://github.com/QoroQuantum/maestro) high-performance quantum circuit simulator — each structured as a **two-phase tutorial** showing the jump from local CPU simulation to GPU-accelerated execution.
 
-1. [Rydberg Atom Simulation](#1-rydberg-atom-simulation) — Phase diagram and spatial correlations of a 64-atom array
-2. [Classical Shadows](#2-classical-shadows) — Entanglement detection via MPS-based shadow tomography
-3. [Fermi-Hubbard Model](#3-fermi-hubbard-model) — Adaptive 3-tier simulation exploiting Lieb-Robinson bounds
-4. [Adaptive Bond Dimension](#4-adaptive-bond-dimension) — CPU↔GPU backend switching for time evolution
+## Why GPU Mode?
 
-## Getting Started
+MPS simulation accuracy is controlled by **bond dimension** χ — but tensor contractions scale as **O(χ³)**. On a CPU, doubling χ means **8× the runtime**. For large systems with high entanglement, CPU-only simulation hits a wall fast.
 
-```bash
-pip install -r requirements.txt
+Maestro's GPU backend (`SimulatorType.CuQuantum`) parallelizes those O(χ³) contractions on NVIDIA GPUs, delivering **10–100× speedups** on the expensive steps — with zero code changes:
+
+```python
+# CPU — works, but slow at high bond dimension
+result = qc.estimate(
+    simulator_type=maestro.SimulatorType.QCSim,
+    simulation_type=maestro.SimulationType.MatrixProductState,
+    max_bond_dimension=64,
+)
+
+# GPU — same API, same code, just swap one argument
+result = qc.estimate(
+    simulator_type=maestro.SimulatorType.CuQuantum,          # ← GPU
+    simulation_type=maestro.SimulationType.MatrixProductState,
+    max_bond_dimension=256,                                   # ← go higher
+)
 ```
 
-Or install the core dependency directly:
+Every example below follows the same pattern: **Phase 1** runs locally on CPU with modest parameters to prove the physics works. **Phase 2** scales up with GPU mode — because your CPU shouldn't be the bottleneck.
+
+---
+
+## Getting Started
 
 ```bash
 pip install qoro-maestro
 ```
 
-Each example directory includes its own README with detailed instructions.
+👉 **[Start your free GPU trial →](https://maestro.qoroquantum.net)**
+
+---
 
 ## Examples
 
-### 1. [Rydberg Atom Simulation](./rydberg_atom_simulation)
+### 1. [Rydberg Atom Simulation](./rydberg_atom_simulation) ⚡
 
-Simulates the adiabatic preparation of a Z2-ordered phase in a 1D Rydberg atom array. Sweeps over detuning and Rabi frequency to map the quantum phase diagram, then measures spatial correlations to confirm long-range crystalline order.
+Phase diagram and spatial correlations of a 64-atom Rydberg array. Sweeps (Δ, Ω) parameter space to map the Z2 ordered phase.
 
-**Key Features:**
-- 64-qubit MPS simulation of Rydberg blockade physics
-- Phase diagram sweep with Z2 staggered magnetization order parameter
-- Spatial correlation measurement via MPS bitstring sampling
-- Comparison of `estimate()` (noise-free) vs `execute()` (sampling) modes
-
-**Scripts:**
-- `rydberg_demo.py` — Phase diagram sweep → `rydberg_phase_diagram.png`
-- `rydberg_correlations.py` — Correlation function → `rydberg_correlations.png`
+**The bottleneck:** 64 atoms × 144 parameter points × MPS simulation each. Scaling to higher bond dimension for accuracy multiplies cost by χ³.
+**The fix:** GPU mode handles high-χ MPS at a fraction of the CPU time — sharper phase boundaries without the wait.
 
 📓 **[Interactive notebook](./rydberg_atom_simulation/rydberg_atom_simulation.ipynb)** — step-by-step tutorial
 
 ---
 
-### 2. [Classical Shadows](./classical_shadows)
+### 2. [Classical Shadows](./classical_shadows) ⚡
 
-Estimates entanglement entropy using the classical shadows protocol ([Huang et al., 2020](https://arxiv.org/abs/2002.08953)) with Maestro's MPS backend. Tracks how the 2nd Rényi entropy $S_2$ grows during Trotter evolution of the transverse-field Ising model.
+Entanglement detection via MPS-based shadow tomography. Estimates 2nd Rényi entropy during Trotter evolution of the transverse-field Ising model.
 
-**Key Features:**
-- Classical shadow protocol with random single-qubit Cliffords
-- MPS-based state preparation and measurement (`execute(shots=1)`)
-- Entanglement growth curves across Trotter depths
-- Exact ED reference for small systems (≤20 qubits)
-
-**Scripts:**
-- `classical_shadows_demo.py` — Shadow sweep → `entanglement_growth.png`
-- `helpers.py` — Reusable library: config, circuits, shadow reconstruction
+**The bottleneck:** Hundreds of independent MPS snapshots at 36 qubits. Each snapshot is a full simulation — sequentially, it crawls.
+**The fix:** GPU-accelerated MPS cuts per-snapshot time dramatically, making large-scale shadow tomography feasible.
 
 📓 **[Interactive notebook](./classical_shadows/classical_shadows.ipynb)** — step-by-step tutorial
 
-```bash
-# Quick test (4×4 = 16 qubits, ~2 min)
-python classical_shadows_demo.py --small
-
-# Full run (6×6 = 36 qubits)
-python classical_shadows_demo.py
-
-# With GPU acceleration
-python classical_shadows_demo.py --gpu
-```
-
-At 36 qubits, full tomography needs $4^{36} \approx 4.7 \times 10^{21}$ measurements — classical shadows use just 200 snapshots.
-
 ---
 
-### 3. [Fermi-Hubbard Model](./fermi_hubbard)
+### 3. [Fermi-Hubbard Model](./fermi_hubbard) ⚡
 
-Adaptive simulation of the 1D Fermi-Hubbard model — a fundamental model of strongly correlated electrons. Exploits the Lieb-Robinson bound: after a local quench, information propagates at finite speed, so most of the system remains frozen. A 200-qubit system is reduced to ~40 active qubits.
+Adaptive 3-tier simulation of a 200-qubit Fermi-Hubbard system. The Lieb-Robinson light cone reduces a 200-qubit problem to ~40 active qubits.
 
-**Key Features:**
-- 3-tier adaptive pipeline: PP Scout → MPS Sniper (χ=64) → Precision (χ=256)
-- Clifford-only Pauli Propagator for light-cone detection on the full system
-- Jordan-Wigner mapping with nearest-neighbor hopping (no JW strings)
-- Domain-wall quench dynamics with charge transport visualization
-- Scaling sweep demonstrating constant MPS cost regardless of total system size
-- GPU acceleration for the precision tier
-
-**Scripts:**
-- `fermi_hubbard_demo.py` — Full pipeline → `adaptive_hubbard_density.png`, `adaptive_hubbard_scaling.png`
-- `model.py` — `FermiHubbardModel` class for circuit construction
+**The bottleneck:** The precision tier (χ=256) dominates runtime. O(χ³) tensor contractions on CPU take hours.
+**The fix:** GPU acceleration on the precision tier → **~10× speedup** on the most expensive step. The whole pipeline finishes in minutes.
 
 📓 **[Interactive notebook](./fermi_hubbard/fermi_hubbard.ipynb)** — step-by-step tutorial
 
-```bash
-# Default run (CPU only)
-python fermi_hubbard_demo.py
-
-# With GPU precision tier
-python fermi_hubbard_demo.py --gpu
-
-# Include scaling sweep across system sizes
-python fermi_hubbard_demo.py --scaling
-```
-
-The Lieb-Robinson light cone lets Maestro simulate a 200-qubit system at the cost of ~40 qubits, with GPU acceleration providing ~10× speedup on the precision tier.
-
 ---
 
-### 4. [Adaptive Bond Dimension](./adaptive_bond_dimension)
+### 4. [Adaptive Bond Dimension](./adaptive_bond_dimension) ⚡
 
-Demonstrates how easy it is to switch between CPU and GPU backends during MPS time evolution. As entanglement grows, the simulation automatically upgrades from low bond dimension (CPU) to high bond dimension (GPU) — with just a single argument change.
+CPU↔GPU backend switching during MPS time evolution. As entanglement grows, the simulation automatically upgrades from low-χ CPU to high-χ GPU.
 
-**Key Features:**
-- Side-by-side comparison: CPU low-χ vs CPU high-χ vs GPU high-χ
-- Automatic handoff when entanglement exceeds threshold
-- Per-step timing breakdown showing where GPU acceleration pays off
-- Trivial backend switching — same API, same code
-
-**Scripts:**
-- `adaptive_mps.py` — Full comparison → `adaptive_comparison.png`
+**The bottleneck:** High bond dimension means O(χ³) per step. CPU grinds to a halt exactly when accuracy matters most.
+**The fix:** GPU mode parallelizes the heavy tensor contractions — accurate AND fast. Same code, one argument change.
 
 📓 **[Interactive notebook](./adaptive_bond_dimension/adaptive_bond_dimension.ipynb)** — step-by-step tutorial
 
+---
+
+### 5. [Quantum Many-Body Scarring](./quantum_scarring) ⚡
+
+PXP fidelity revivals from the Néel state in a Rydberg chain. Tracks staggered magnetization oscillations — a dramatic ETH violation.
+
+**The bottleneck:** 64 atoms × 60 Trotter steps at moderate bond dimension = hours on CPU.
+**The fix:** GPU mode delivers the full revival structure of a 64-atom chain without overnight runs.
+
+---
+
+### 6. [Dynamical Quantum Phase Transition](./dynamical_phase_transition) ⚡
+
+Loschmidt echo cusps after a sudden TFIM quench. Non-analytic singularities in the rate function — dynamical analogs of thermodynamic phase transitions.
+
+**The bottleneck:** Multi-quench sweep × 40 Trotter steps each. Crisp cusps need χ=64+ on 80 qubits.
+**The fix:** GPU mode makes the full 80-qubit, 3-quench sweep run in reasonable time.
+
+---
+
+## Ready to Scale?
+
+Every example in this repo works locally on CPU. But when you're ready to go beyond toy parameters:
+
+1. **[Start your free GPU trial](https://maestro.qoroquantum.net)** — no credit card required
+2. `pip install qoro-maestro`
+3. Add `--gpu` to any example script
+
+**That's it.** Same code, GPU scale.
+
 ```bash
-# CPU only (compare bond dimensions)
-python adaptive_mps.py
+# CPU (default)
+python scarring_demo.py
 
-# With GPU acceleration
-python adaptive_mps.py --gpu
-
-# Large system (8×8 = 64 qubits)
-python adaptive_mps.py --large --gpu
+# GPU — one flag, 10-100× faster
+python scarring_demo.py --gpu
 ```
 
-The pitch: Maestro lets you switch backends with one argument. No code rewrite, no separate GPU code paths.
+👉 **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)**
 
 ## Maestro Features Demonstrated
 
@@ -141,11 +131,11 @@ The pitch: Maestro lets you switch backends with one argument. No code rewrite, 
 |---------|-----|----------|
 | Matrix Product State | `SimulationType.MatrixProductState` | All examples |
 | Pauli Propagator | `SimulationType.PauliPropagator` | Fermi-Hubbard (Tier 1) |
-| Bond dimension control | `max_bond_dimension=χ` | Adaptive Bond Dimension, Fermi-Hubbard |
-| Expectation values | `qc.estimate(observables=...)` | Rydberg, Adaptive, Fermi-Hubbard |
-| Bitstring sampling | `qc.execute(shots=N)` | Rydberg (correlations), Classical Shadows |
+| Bond dimension control | `max_bond_dimension=χ` | All examples |
+| Expectation values | `qc.estimate(observables=...)` | All examples |
+| Bitstring sampling | `qc.execute(shots=N)` | Rydberg, Classical Shadows |
 | CPU backend | `SimulatorType.QCSim` | All examples |
-| GPU acceleration | `SimulatorType.CuQuantum` | Adaptive Bond Dimension, Fermi-Hubbard |
+| GPU acceleration | `SimulatorType.CuQuantum` | All examples (Phase 2) |
 
 ## License
 

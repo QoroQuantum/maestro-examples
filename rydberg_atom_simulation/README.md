@@ -1,71 +1,59 @@
 # Rydberg Atom Array Simulation
 
-Simulates the adiabatic preparation of a Z2-ordered phase in a 1D Rydberg atom array using Maestro's Matrix Product State (MPS) backend.
+> 🚀 **Try Maestro GPU mode with a free trial.**
+> Sign up at **[maestro.qoroquantum.net](https://maestro.qoroquantum.net)** — no credit card required.
 
-## Physics Background
+## Why GPU Mode?
 
-Rydberg atom arrays are a leading platform for quantum simulation. Neutral atoms trapped in optical tweezers interact via strong van der Waals interactions when excited to Rydberg states. The system is governed by:
+A 64-atom Rydberg phase diagram sweep means **144 independent MPS simulations** (12×12 grid). At bond dimension χ=16, that's manageable on CPU. But accurate phase boundaries need higher χ — and MPS cost scales as **O(χ³)**. Doubling χ from 16 to 32 means **8× the runtime per simulation point**. GPU mode makes high-χ sweeps practical.
 
-$$H = \frac{\Omega}{2} \sum_i X_i - \Delta \sum_i n_i + V \sum_{\langle i,j \rangle} n_i n_j$$
+## What It Does
 
-where:
-- **Ω** (Rabi frequency) drives transitions between ground and Rydberg states
-- **Δ** (detuning) controls the energy cost of Rydberg excitation
-- **V** (interaction strength) implements the Rydberg blockade
-- **n_i = (I − Z_i)/2** is the Rydberg excitation number operator
+Simulates the adiabatic preparation of a **Z2-ordered phase** in a 1D Rydberg atom array. Neutral atoms interact via van der Waals blockade — sweeping the detuning Δ drives a quantum phase transition into an alternating excitation pattern (|1010...⟩).
 
-By sweeping Δ from negative (all atoms in ground state) to positive (favoring excitation), with V preventing adjacent excitations, the system undergoes a quantum phase transition into a **Z2-ordered phase** — an alternating pattern of excited and ground-state atoms (|1010...⟩).
+### Phase 1 — Local (CPU)
 
-## Examples
+64 atoms, χ=16, 12×12 parameter grid. Fast enough on a laptop to map the phase diagram and see the Z2 phase emerge.
 
-### 1. Phase Diagram (`rydberg_demo.py`)
+### Phase 2 — GPU Mode
 
-Sweeps over a 2D grid of (Δ, Ω) values to map the phase diagram of the Rydberg atom array. At each point, the Z2 staggered magnetization order parameter is computed:
-
-$$\mathcal{O} = \frac{1}{N/2} \left| \sum_i (-1)^i \langle n_i \rangle \right|$$
-
-This reveals two phases:
-- **Disordered** (small Δ): All atoms in the ground state, O ≈ 0
-- **Z2 Ordered** (large Δ, moderate Ω): Alternating excitation pattern, O → 1
-
-**Maestro features used:**
-- `QuantumCircuit` for programmatic circuit construction
-- `qc.estimate()` with MPS backend for efficient 64-qubit simulation
-- Expectation value computation without sampling noise
+Scale to higher bond dimension (χ=32–64) for sharper phase boundaries, or increase grid resolution — GPU handles the O(χ³) cost efficiently.
 
 ```bash
+# Phase 1: CPU (default)
 python rydberg_demo.py
+
+# Phase 2: GPU-accelerated
+python rydberg_demo.py --gpu
 ```
 
-**Output:** `rydberg_phase_diagram.png`
+## Scripts
 
-### 2. Spatial Correlations (`rydberg_correlations.py`)
+| Script | What It Does |
+|--------|-------------|
+| `rydberg_demo.py` | Phase diagram sweep → `rydberg_phase_diagram.png` |
+| `rydberg_correlations.py` | Spatial correlation function → `rydberg_correlations.png` |
 
-Demonstrates MPS **sampling mode** to measure the connected correlation function:
-
-$$C(r) = \langle n_i \, n_{i+r} \rangle - \langle n_i \rangle \langle n_{i+r} \rangle$$
-
-Key insight: computing pairwise correlations via `estimate()` would require O(N²) separate observable evaluations. Using `execute()` (sampling), all correlations are extracted from a single set of bitstrings.
-
-**Maestro features used:**
-- `qc.execute()` with MPS backend — stochastic bitstring sampling
-- MPS samples bitstrings efficiently via sequential conditional probabilities
-
-```bash
-python rydberg_correlations.py
-```
-
-**Output:** `rydberg_correlations.png`
+📓 **[Interactive notebook](./rydberg_atom_simulation.ipynb)** — step-by-step tutorial
 
 ## Configuration
 
-Both scripts use default parameters tuned for a laptop CPU:
-- **N = 64 atoms** (phase diagram), **N = 15** (correlations)
-- **MPS bond dimension:** χ = 16–32
-- **Trotter steps:** 20 (dt = 0.15)
+| Parameter | Default |
+|-----------|---------|
+| Atoms | 64 |
+| Bond dim χ | 16 |
+| Grid | 12 × 12 (Δ vs Ω) |
+| Trotter steps | 20 (dt = 0.15) |
+| Interaction V | 5.0 |
 
-## Requirements
+## Expected Output
 
-- `qoro-maestro` Python package
-- `numpy`
-- `matplotlib`
+**`rydberg_phase_diagram.png`** — Heatmap showing two phases:
+- **Disordered** (small Δ): All atoms in ground state
+- **Z2 Ordered** (large Δ, moderate Ω): Alternating excitation pattern
+
+**`rydberg_correlations.png`** — Connected correlation function C(r) from bitstring sampling, confirming long-range crystalline order.
+
+---
+
+👉 **Ready for sharper phase boundaries?** [Start your free GPU trial](https://maestro.qoroquantum.net) and scale up with `--gpu`.
