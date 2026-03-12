@@ -93,7 +93,7 @@ def compute_energy(qc, n, bonds, j, h, chi, simulator_type, use_gpu):
     for q in range(n):
         obs.append(build_pauli_observable(n, {q: 'X'}))
 
-    sim_type = (maestro.SimulatorType.CuQuantum if use_gpu
+    sim_type = (maestro.SimulatorType.Gpu if use_gpu
                 else maestro.SimulatorType.QCSim)
 
     result = qc.estimate(

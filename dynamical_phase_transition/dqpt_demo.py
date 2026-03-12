@@ -211,7 +211,7 @@ def run_dqpt_sweep(n_qubits, j, h_values, n_steps, dt, chi, use_gpu):
     Returns:
         List of result dicts, one per h_f value.
     """
-    sim_type = (maestro.SimulatorType.CuQuantum if use_gpu
+    sim_type = (maestro.SimulatorType.Gpu if use_gpu
                 else maestro.SimulatorType.QCSim)
 
     x_observables = build_x_observables(n_qubits)
@@ -370,7 +370,7 @@ if __name__ == '__main__':
     print(f"  Hamiltonian: H = −J Σ ZᵢZᵢ₊₁ − h Σ Xᵢ  (J = {j})")
     print(f"  Time:        T = {T_total:.1f}, {n_steps} steps, dt = {dt}")
     print(f"  MPS:         χ = {chi}")
-    print(f"  Backend:     {'GPU (CuQuantum)' if use_gpu else 'CPU (QCSim)'}")
+    print(f"  Backend:     {'GPU' if use_gpu else 'CPU (QCSim)'}")
     print(f"\n  Protocol:")
     print(f"    1. Prepare |ψ₀⟩ = |+⟩^⊗{n_qubits}  "
           f"(paramagnetic ground state)")

@@ -9,7 +9,7 @@ Example simulations demonstrating quantum simulation capabilities with the [Maes
 
 MPS simulation accuracy is controlled by **bond dimension** χ — but tensor contractions scale as **O(χ³)**. On a CPU, doubling χ means **8× the runtime**. For large systems with high entanglement, CPU-only simulation hits a wall fast.
 
-Maestro's GPU backend (`SimulatorType.CuQuantum`) parallelizes those O(χ³) contractions on NVIDIA GPUs, delivering **10–100× speedups** on the expensive steps — with zero code changes:
+Maestro's GPU backend (`SimulatorType.Gpu`) parallelizes those O(χ³) contractions on NVIDIA GPUs, delivering **10–100× speedups** on the expensive steps — with zero code changes:
 
 ```python
 # CPU — works, but slow at high bond dimension
@@ -21,7 +21,7 @@ result = qc.estimate(
 
 # GPU — same API, same code, just swap one argument
 result = qc.estimate(
-    simulator_type=maestro.SimulatorType.CuQuantum,          # ← GPU
+    simulator_type=maestro.SimulatorType.Gpu,          # ← GPU
     simulation_type=maestro.SimulationType.MatrixProductState,
     max_bond_dimension=256,                                   # ← go higher
 )
@@ -135,7 +135,7 @@ python scarring_demo.py --gpu
 | Expectation values | `qc.estimate(observables=...)` | All examples |
 | Bitstring sampling | `qc.execute(shots=N)` | Rydberg, Classical Shadows |
 | CPU backend | `SimulatorType.QCSim` | All examples |
-| GPU acceleration | `SimulatorType.CuQuantum` | All examples (Phase 2) |
+| GPU acceleration | `SimulatorType.Gpu` | All examples (Phase 2) |
 
 ## License
 

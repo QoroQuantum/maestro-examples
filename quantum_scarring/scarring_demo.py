@@ -244,7 +244,7 @@ def run_scarring_experiment(n_atoms, omega, interaction_v, n_steps, dt,
 
     Tracks staggered magnetization via estimate() [noise-free].
     """
-    sim_type = (maestro.SimulatorType.CuQuantum if use_gpu
+    sim_type = (maestro.SimulatorType.Gpu if use_gpu
                 else maestro.SimulatorType.QCSim)
 
     observables = build_z_observables(n_atoms)
@@ -423,7 +423,7 @@ if __name__ == '__main__':
           f"(V/Ω = {interaction_v/omega:.0f})")
     print(f"  Time:        T = {T_total:.1f}, {n_steps} steps, dt = {dt}")
     print(f"  MPS:         χ = {chi}")
-    print(f"  Backend:     {'GPU (CuQuantum)' if use_gpu else 'CPU (QCSim)'}")
+    print(f"  Backend:     {'GPU' if use_gpu else 'CPU (QCSim)'}")
     print(f"\n  Physics: In a generic quantum system, the Néel state would")
     print(f"  thermalize — M(t) decaying monotonically to 0. But the PXP")
     print(f"  model has quantum scars: special eigenstates that cause M(t)")

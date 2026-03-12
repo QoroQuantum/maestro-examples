@@ -49,7 +49,7 @@ result = qc.estimate(
 
 # High-χ on GPU (accurate, GPU-accelerated)
 result = qc.estimate(
-    simulator_type=maestro.SimulatorType.CuQuantum,      # GPU
+    simulator_type=maestro.SimulatorType.Gpu,      # GPU
     simulation_type=maestro.SimulationType.MatrixProductState,
     max_bond_dimension=64,
 )
